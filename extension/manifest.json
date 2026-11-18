@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Job Track Catcher",
+  "version": "0.1.0",
+  "description": "Catches the data you enter into job application forms and saves it for your tracking sheet.",
+  "permissions": ["storage"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Job Track Catcher",
+    "default_popup": "popup/popup.html"
+  },
+  "options_page": "options/options.html"
+}
