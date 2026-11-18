@@ -7,16 +7,19 @@
   </head>
   <body>
     <header>
-      <h1>Job Track Catcher</h1>
-      <span id="count" class="count"></span>
+      <h1>Saved applications</h1>
+      <span id="count" class="muted"></span>
     </header>
 
-    <ul id="captures" class="captures"></ul>
-    <p id="empty" class="empty" hidden>No captures yet. Submit a form on any page to catch it.</p>
+    <ul id="list" class="list"></ul>
+    <p id="empty" class="empty muted" hidden>
+      Nothing saved yet. Open a job application, fill it in, and click
+      <strong>Save Application Data</strong> next to the submit button.
+    </p>
 
     <footer>
-      <button id="export" type="button">Export CSV</button>
-      <button id="clear" type="button" class="secondary">Clear</button>
+      <button id="copyAll" type="button">Copy all JSON</button>
+      <button id="clear" type="button" class="secondary">Clear all</button>
       <a id="options" href="#">Settings</a>
     </footer>
 

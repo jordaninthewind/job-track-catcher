@@ -3,7 +3,9 @@
   --fg: #1f2328;
   --muted: #656d76;
   --border: #d0d7de;
-  --accent: #0969da;
+  --subtle: #f6f8fa;
+  --accent: #1a7f37;
+  --danger: #cf222e;
   color-scheme: light dark;
 }
 
@@ -13,7 +15,9 @@
     --fg: #e6edf3;
     --muted: #8d96a0;
     --border: #3d444d;
-    --accent: #4493f8;
+    --subtle: #262c36;
+    --accent: #3fb950;
+    --danger: #f85149;
   }
 }
 
@@ -22,7 +26,7 @@
 }
 
 body {
-  width: 360px;
+  width: 420px;
   margin: 0;
   padding: 12px;
   font: 13px/1.4 system-ui, sans-serif;
@@ -42,33 +46,93 @@ h1 {
   margin: 0;
 }
 
-.count,
-.empty,
-.meta {
+.muted {
   color: var(--muted);
 }
 
-.captures {
+.list {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 360px;
+  max-height: 440px;
   overflow-y: auto;
 }
 
-.captures li {
-  padding: 8px 0;
+.list > li {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+summary {
+  padding: 8px 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+details[open] summary {
   border-bottom: 1px solid var(--border);
 }
 
-.captures .title {
+.company {
   font-weight: 600;
+}
+
+.job,
+.meta {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.captures .meta {
+.meta {
+  font-size: 11px;
+}
+
+.body {
+  padding: 8px 10px;
+}
+
+.fields {
+  margin: 0;
+}
+
+.fields dt {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+.fields dd {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.actions a {
+  margin-left: auto;
+  align-self: center;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+pre {
+  margin: 8px 0 0;
+  padding: 8px;
+  max-height: 200px;
+  overflow: auto;
+  background: var(--subtle);
+  border-radius: 6px;
   font-size: 11px;
 }
 
@@ -76,12 +140,12 @@ footer {
   display: flex;
   gap: 8px;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 footer a {
   margin-left: auto;
-  color: var(--accent);
+  color: var(--muted);
 }
 
 button {
@@ -98,4 +162,16 @@ button.secondary {
   background: transparent;
   color: var(--fg);
   border-color: var(--border);
+}
+
+button.danger {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--border);
+}
+
+button.confirm {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
 }

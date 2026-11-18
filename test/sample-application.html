@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Job Application for Senior Frontend Engineer at Acme Robotics</title>
+    <style>
+      body { font: 15px/1.5 system-ui, sans-serif; max-width: 640px; margin: 32px auto; padding: 0 16px; }
+      label { display: block; margin-top: 14px; font-weight: 600; }
+      input[type="text"], input[type="email"], textarea, select { width: 100%; padding: 6px; }
+      fieldset { margin-top: 14px; }
+      .submit-row { margin-top: 24px; }
+      .submit-row button { padding: 10px 16px; }
+    </style>
+  </head>
+  <body>
+    <!-- Sample job application for manually testing the extension.
+         Serve it over http (e.g. `python3 -m http.server` from the repo root),
+         since content scripts don't run on file:// URLs by default. -->
+    <h1>Senior Frontend Engineer</h1>
+
+    <form id="application" onsubmit="event.preventDefault(); alert('Submitted (sample page)');">
+      <label for="first_name">First Name *</label>
+      <input id="first_name" name="first_name" type="text" value="Ada" required />
+
+      <label for="last_name">Last Name *</label>
+      <input id="last_name" name="last_name" type="text" value="Lovelace" required />
+
+      <label for="email">Email *</label>
+      <input id="email" name="email" type="email" value="ada@example.com" required />
+
+      <label>
+        LinkedIn Profile
+        <input name="linkedin" type="text" value="https://linkedin.com/in/ada" />
+      </label>
+
+      <input type="text" aria-label="Portfolio website" name="website" value="https://ada.dev" />
+
+      <label for="resume">Resume</label>
+      <input id="resume" name="resume" type="file" />
+
+      <label for="source">How did you hear about us?</label>
+      <select id="source" name="source">
+        <option value="">Select...</option>
+        <option value="li" selected>LinkedIn</option>
+        <option value="ref">Referral</option>
+      </select>
+
+      <fieldset>
+        <legend>Are you authorized to work in the US? *</legend>
+        <label><input type="radio" name="auth" value="yes" checked /> Yes</label>
+        <label><input type="radio" name="auth" value="no" /> No</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Which stacks have you used?</legend>
+        <label><input type="checkbox" name="stack" value="react" checked /> React</label>
+        <label><input type="checkbox" name="stack" value="vue" /> Vue</label>
+        <label><input type="checkbox" name="stack" value="svelte" checked /> Svelte</label>
+      </fieldset>
+
+      <label for="why">Why do you want to work here?</label>
+      <textarea id="why" name="why">I like robots.</textarea>
+
+      <label><input type="checkbox" name="consent" checked /> I agree to the privacy policy</label>
+
+      <input type="hidden" name="csrf" value="should-not-be-captured" />
+
+      <div class="submit-row">
+        <button type="submit">Submit Application</button>
+      </div>
+    </form>
+  </body>
+</html>
