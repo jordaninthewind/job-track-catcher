@@ -180,3 +180,23 @@ button:disabled {
   opacity: 0.5;
   cursor: default;
 }
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-actions .muted {
+  margin-right: auto;
+}
+
+.page-actions .error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+}

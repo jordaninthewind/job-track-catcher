@@ -1,8 +1,19 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useSettings } from "../lib/hooks";
 import type { Settings } from "../lib/types";
+import { PrefillSettings } from "../prefill/PrefillSettings";
 
 export function App() {
+  return (
+    <main>
+      <h1>Settings</h1>
+      <GeneralSettings />
+      <PrefillSettings />
+    </main>
+  );
+}
+
+function GeneralSettings() {
   const { settings, loaded, save } = useSettings();
   const [draft, setDraft] = useState<Settings>(settings);
   const [status, setStatus] = useState("");
@@ -25,8 +36,8 @@ export function App() {
   };
 
   return (
-    <form onSubmit={onSubmit}>
-      <h1>Settings</h1>
+    <form className="section" onSubmit={onSubmit}>
+      <h2>General</h2>
 
       <label htmlFor="sheetUrl">Tracking sheet URL</label>
       <input
@@ -44,7 +55,7 @@ export function App() {
           checked={draft.enabled}
           onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
         />{" "}
-        Show the "Save Application Data" button on pages
+        Show the "Prefill" and "Save Application Data" buttons on pages
       </label>
 
       <p>

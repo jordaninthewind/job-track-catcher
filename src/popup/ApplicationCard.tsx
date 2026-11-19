@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { sendMessage } from "../lib/storage";
 import type { StoredApplication } from "../lib/types";
-import { ConfirmButton, CopyButton } from "./buttons";
+import { ConfirmButton, CopyButton } from "../components/buttons";
 import { toJson } from "./json";
 
 export function ApplicationCard({ record }: { record: StoredApplication }) {

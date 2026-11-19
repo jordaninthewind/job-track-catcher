@@ -1,7 +1,8 @@
 import { useApplications } from "../lib/hooks";
 import { sendMessage } from "../lib/storage";
 import { ApplicationCard } from "./ApplicationCard";
-import { ConfirmButton, CopyButton } from "./buttons";
+import { ConfirmButton, CopyButton } from "../components/buttons";
+import { PrefillPageActions } from "../prefill/PrefillPageActions";
 import { toJson } from "./json";
 
 export function App() {
@@ -9,6 +10,8 @@ export function App() {
 
   return (
     <>
+      <PrefillPageActions />
+
       <header>
         <h1>Saved applications</h1>
         {records.length > 0 && <span className="muted">{records.length} saved</span>}

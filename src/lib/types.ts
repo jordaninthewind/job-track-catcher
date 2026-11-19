@@ -24,7 +24,9 @@ export interface Settings {
 export type Message =
   | { type: "SAVE_APPLICATION"; application: Application }
   | { type: "DELETE_APPLICATION"; id: string }
-  | { type: "CLEAR_APPLICATIONS" };
+  | { type: "CLEAR_APPLICATIONS" }
+  /** From the Prefill picker in any frame: stop picking in every frame of that tab. */
+  | { type: "STOP_PICKER" };
 
 export type MessageResponse =
   | { ok: true; id?: string; updated?: boolean }

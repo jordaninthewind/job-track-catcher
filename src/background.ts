@@ -4,6 +4,7 @@
 import { connectDevReload } from "./lib/dev-reload";
 import { APPLICATIONS_KEY, getRecords, setRecords } from "./lib/storage";
 import type { Application, Message, MessageResponse, StoredApplication } from "./lib/types";
+import type { TabMessage } from "./prefill/types";
 
 if (process.env.NODE_ENV === "development") connectDevReload(process.env.DEV_SERVER_PORT ?? "8000");
 
@@ -42,6 +43,10 @@ async function handle(message: Message, sender: chrome.runtime.MessageSender): P
       return { ok: true };
     case "CLEAR_APPLICATIONS":
       await setRecords([]);
+      return { ok: true };
+    case "STOP_PICKER":
+      // Relay to every frame in the sender's tab.
+      if (sender.tab?.id !== undefined) await chrome.tabs.sendMessage(sender.tab.id, { type: "STOP_PICKER" } satisfies TabMessage);
       return { ok: true };
   }
 }

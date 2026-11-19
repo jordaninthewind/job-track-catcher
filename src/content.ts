@@ -1,15 +1,20 @@
-// Content script: finds a job application's submit button, puts a
-// "Save Application Data" button next to it, and on click builds
-//   { url, company, role, inputs: { "<question label>": "<answer>" } }
-// and sends it to the background service worker.
+// Content script: finds a job application's submit button and puts
+// "Prefill" and "Save Application Data" buttons next to it.
+//   - Save builds { url, company, role, inputs: { "<question label>": "<answer>" } }
+//     and sends it to the background service worker.
+//   - Prefill fills empty questions from saved answers (see src/prefill/).
+// Also handles the popup's "Prefill page" and "Pick fields" commands.
 //
 // Plain TypeScript (no React): this runs on every page, so it stays small.
 // Bundled as an IIFE because Chrome doesn't load content scripts as modules.
 
+import { clean, collectInputs, countFields, HOST_ATTR, isVisible, textOf } from "./lib/fields";
 import { getSettings, sendMessage } from "./lib/storage";
-import type { Application, Inputs } from "./lib/types";
-
-type FormControl = HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+import type { Application } from "./lib/types";
+import { describeResult, prefill } from "./prefill/fill";
+import { toast } from "./prefill/overlay";
+import { startPicker, stopPicker } from "./prefill/picker";
+import type { TabMessage } from "./prefill/types";
 
 declare global {
   interface Window {
@@ -17,136 +22,14 @@ declare global {
   }
 }
 
-const HOST_ATTR = "data-jtc-host";
-const SKIP_TYPES = new Set(["password", "hidden", "submit", "button", "reset", "image"]);
 const SUBMIT_TEXT =
   /^(submit|submit (my |your )?application|apply|apply now|send application|complete application|finish application)$/i;
-// Labels on helper controls that say nothing about the question (Greenhouse's resume widget, etc.).
-const GENERIC_LABELS = /^(attach|upload|choose file|browse|enter manually|dropbox|google drive)$/i;
-const FILE_NAME = /\S+\.(pdf|docx?|txt|rtf|odt|pages)$/i;
-const BUTTON_LABEL = "Save Application Data";
-
-// ---------- text helpers ----------
-
-const clean = (s: string | null | undefined): string =>
-  (s ?? "")
-    .replace(/\s+/g, " ")
-    .replace(/\s*\*\s*$/, "") // trailing "required" asterisk
-    .trim();
-
-function textOf(node: Element | null | undefined): string {
-  if (!node) return "";
-  // Drop nested controls and hidden decorations so a wrapping <label>
-  // doesn't pick up option text or the "*" required marker.
-  const copy = node.cloneNode(true) as Element;
-  copy
-    .querySelectorAll(`input, select, textarea, style, script, [aria-hidden="true"], [${HOST_ATTR}]`)
-    .forEach((n) => n.remove());
-  return clean(copy.textContent);
-}
-
-function byIds(ids: string | null): string {
-  return clean(
-    (ids ?? "")
-      .split(/\s+/)
-      .map((id) => textOf(id ? document.getElementById(id) : null))
-      .join(" ")
-  );
-}
+const SAVE_LABEL = "Save Application Data";
+const PREFILL_LABEL = "Prefill";
 
 function buttonText(el: HTMLElement): string {
   const text = el instanceof HTMLInputElement ? el.value : el.innerText || el.textContent;
   return clean(text) || clean(el.getAttribute("aria-label"));
-}
-
-function isVisible(el: Element): boolean {
-  return el.getClientRects().length > 0 && getComputedStyle(el).visibility !== "hidden";
-}
-
-// ---------- labels ----------
-
-function ownLabel(el: FormControl): string {
-  if (el.labels?.length) {
-    const t = clean([...el.labels].map(textOf).join(" "));
-    if (t) return t;
-  }
-  return (
-    byIds(el.getAttribute("aria-labelledby")) ||
-    clean(el.getAttribute("aria-label")) ||
-    clean(el.getAttribute("placeholder")) ||
-    clean(el.getAttribute("title"))
-  );
-}
-
-// The question a control belongs to when the control itself is one option
-// or a helper (radio/checkbox groups, file upload widgets).
-function groupLabel(el: Element): string {
-  const group = el.closest('fieldset, [role="radiogroup"], [role="group"]');
-  if (!group) return "";
-  if (group instanceof HTMLFieldSetElement) {
-    const legend = group.querySelector("legend");
-    if (legend) return textOf(legend);
-  }
-  return byIds(group.getAttribute("aria-labelledby")) || clean(group.getAttribute("aria-label"));
-}
-
-function labelFor(el: FormControl): string {
-  const own = ownLabel(el);
-  if (el.type === "file" || !own || GENERIC_LABELS.test(own)) {
-    return groupLabel(el) || own || el.name || el.id || "";
-  }
-  return own;
-}
-
-// ---------- values ----------
-
-// Custom dropdowns (react-select on Greenhouse, etc.) keep the chosen value
-// in a sibling element rather than in the <input>.
-function comboboxValue(el: FormControl): string {
-  const container =
-    el.closest('[class*="value-container"], [class*="ValueContainer"]') ??
-    el.closest('[class*="control"], [class*="Control"]');
-  if (container) {
-    const chosen = container.querySelectorAll(
-      '[class*="single-value"], [class*="singleValue"], [class*="multi-value__label"], [class*="MultiValueLabel"]'
-    );
-    if (chosen.length) return [...chosen].map(textOf).filter(Boolean).join(", ");
-  }
-  return el.value.trim();
-}
-
-function fileValue(el: HTMLInputElement): string {
-  const names = [...(el.files ?? [])].map((f) => f.name);
-  if (names.length) return names.join(", ");
-  // After upload some ATSs reset the <input> and show the file name as text instead.
-  const group = el.closest('[role="group"]') ?? el.closest('.file-upload, [class*="upload"]');
-  if (!group) return "";
-  for (const node of group.querySelectorAll("*")) {
-    if (node.children.length) continue;
-    const t = clean(node.textContent);
-    if (FILE_NAME.test(t) && !/accepted file types/i.test(t)) return t;
-  }
-  return "";
-}
-
-function valueFor(el: FormControl, type: string): string {
-  if (type === "file" && el instanceof HTMLInputElement) return fileValue(el);
-  if (el instanceof HTMLSelectElement) {
-    return [...el.selectedOptions]
-      .filter((o) => o.value !== "")
-      .map((o) => clean(o.text))
-      .join(", ");
-  }
-  if (el.getAttribute("role") === "combobox") return comboboxValue(el);
-  return el.value.trim();
-}
-
-// ---------- field collection ----------
-
-function countFields(scope: ParentNode): number {
-  return scope.querySelectorAll(
-    "input:not([type=hidden]):not([type=submit]):not([type=button]), textarea, select"
-  ).length;
 }
 
 function formOf(el: Element): HTMLFormElement | null {
@@ -162,47 +45,6 @@ function scopeFor(submitEl: HTMLElement): Element {
     if (countFields(el) >= 3) return el;
   }
   return document.body;
-}
-
-/** Returns { "<label>": "<answer>" } in page order. Unanswered questions are kept as "". */
-function collectInputs(scope: Element): Inputs {
-  const inputs: Inputs = {};
-
-  const put = (label: string, value: string, append = false) => {
-    if (!label) return;
-    const current = inputs[label];
-    if (current === undefined) {
-      inputs[label] = value;
-    } else if (append && value) {
-      inputs[label] = current ? `${current}, ${value}` : value;
-    } else if (!current && value) {
-      // e.g. Resume "Attach" was empty but "Enter manually" has text.
-      inputs[label] = value;
-    }
-  };
-
-  for (const el of scope.querySelectorAll<FormControl>("input, textarea, select")) {
-    if (el.closest(`[${HOST_ATTR}]`) || el.disabled) continue;
-    if (el.getAttribute("aria-hidden") === "true") continue; // shadow inputs used for "required" validation
-    const type = (el.type || el.tagName).toLowerCase();
-    if (SKIP_TYPES.has(type)) continue;
-    if (type !== "file" && !isVisible(el)) continue; // honeypots, collapsed widgets
-
-    if (el instanceof HTMLInputElement && (type === "radio" || type === "checkbox")) {
-      const question = groupLabel(el);
-      const option = ownLabel(el) || el.value;
-      if (!question && type === "checkbox") {
-        // Standalone checkbox, e.g. "I agree to the privacy policy".
-        put(option, el.checked ? "Yes" : "No");
-      } else {
-        put(question || el.name || option, el.checked ? option : "", true);
-      }
-      continue;
-    }
-
-    put(labelFor(el), valueFor(el, type));
-  }
-  return inputs;
 }
 
 // ---------- company / role ----------
@@ -258,12 +100,12 @@ function roleName(): string {
   );
 }
 
-// ---------- save ----------
+// ---------- button actions ----------
 
 async function handleSave(submitEl: HTMLElement, btn: HTMLButtonElement) {
   const inputs = collectInputs(scopeFor(submitEl));
   if (!Object.values(inputs).some(Boolean)) {
-    flash(btn, "No answers found");
+    flash(btn, "No answers found", SAVE_LABEL);
     return;
   }
 
@@ -273,18 +115,30 @@ async function handleSave(submitEl: HTMLElement, btn: HTMLButtonElement) {
 
   try {
     const res = await sendMessage({ type: "SAVE_APPLICATION", application });
-    flash(btn, res.ok ? (res.updated ? "Updated ✓" : "Saved ✓") : "Save failed");
+    flash(btn, res.ok ? (res.updated ? "Updated ✓" : "Saved ✓") : "Save failed", SAVE_LABEL);
   } catch {
     // Happens when the extension was reloaded but this page wasn't.
-    flash(btn, "Reload page to save");
+    flash(btn, "Reload page to save", SAVE_LABEL);
   }
 }
 
-function flash(btn: HTMLButtonElement, text: string) {
+async function handlePrefill(submitEl: HTMLElement, btn: HTMLButtonElement) {
+  btn.disabled = true;
+  btn.textContent = "Filling…";
+  try {
+    const result = await prefill(scopeFor(submitEl));
+    flash(btn, result.filled ? `Filled ${result.filled} ✓` : "Nothing to fill", PREFILL_LABEL);
+    if (!result.filled) toast(describeResult(result));
+  } catch {
+    flash(btn, "Reload page to prefill", PREFILL_LABEL);
+  }
+}
+
+function flash(btn: HTMLButtonElement, text: string, label: string) {
   btn.textContent = text;
   btn.disabled = true;
   setTimeout(() => {
-    btn.textContent = BUTTON_LABEL;
+    btn.textContent = label;
     btn.disabled = false;
   }, 2000);
 }
@@ -321,6 +175,7 @@ function findSubmitButtons(): Set<HTMLElement> {
 }
 
 const BUTTON_STYLES = `
+  :host { display: inline-flex; gap: 8px; }
   button {
     all: initial;
     font: 600 14px/1 system-ui, -apple-system, sans-serif;
@@ -332,6 +187,8 @@ const BUTTON_STYLES = `
     white-space: nowrap;
   }
   button:hover:not(:disabled) { background: #116329; }
+  button.secondary { background: #fff; color: #1a7f37; box-shadow: inset 0 0 0 1px #1a7f37; }
+  button.secondary:hover:not(:disabled) { background: #f0f7f2; }
   button:disabled { opacity: .85; cursor: default; }
 `;
 
@@ -339,24 +196,33 @@ const BUTTON_STYLES = `
 const injected = new Map<HTMLElement, HTMLElement>();
 let enabled = true;
 
+function makeButton(label: string, className: string, onClick: (btn: HTMLButtonElement) => void) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = className;
+  btn.textContent = label;
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation(); // keep the page's own click handlers out of it
+    onClick(btn);
+  });
+  return btn;
+}
+
 function inject(submitEl: HTMLElement) {
   const host = document.createElement("span");
   host.setAttribute(HOST_ATTR, "");
   host.style.cssText = "display:inline-block;margin:0 0 0 8px;vertical-align:middle;";
 
-  // Shadow DOM keeps the page's CSS off our button and ours off the page.
+  // Shadow DOM keeps the page's CSS off our buttons and ours off the page.
   const root = host.attachShadow({ mode: "open" });
   const style = document.createElement("style");
   style.textContent = BUTTON_STYLES;
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.textContent = BUTTON_LABEL;
-  btn.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation(); // keep the page's own click handlers out of it
-    handleSave(submitEl, btn);
-  });
-  root.append(style, btn);
+  root.append(
+    style,
+    makeButton(PREFILL_LABEL, "secondary", (btn) => handlePrefill(submitEl, btn)),
+    makeButton(SAVE_LABEL, "", (btn) => handleSave(submitEl, btn))
+  );
 
   submitEl.insertAdjacentElement("afterend", host);
   injected.set(submitEl, host);
@@ -380,6 +246,29 @@ function scan() {
 function removeAll() {
   for (const host of injected.values()) host.remove();
   injected.clear();
+}
+
+// ---------- popup commands ----------
+
+async function prefillPage() {
+  const result = await prefill(document);
+  // Every frame gets the command; only report from frames that look like a form.
+  if (result.filled || countFields(document) >= 3) toast(describeResult(result));
+}
+
+function onTabMessage(message: TabMessage, _sender: chrome.runtime.MessageSender, sendResponse: (r: unknown) => void) {
+  switch (message.type) {
+    case "START_PICKER":
+      startPicker();
+      break;
+    case "STOP_PICKER":
+      stopPicker();
+      break;
+    case "PREFILL_PAGE":
+      prefillPage();
+      break;
+  }
+  sendResponse({ ok: true });
 }
 
 function start() {
@@ -408,6 +297,8 @@ function start() {
     if (enabled) scan();
     else removeAll();
   });
+
+  chrome.runtime.onMessage.addListener(onTabMessage);
 }
 
 if (!window.__jtcLoaded) {
