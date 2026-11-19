@@ -2,15 +2,15 @@ import { useApplications } from "../lib/hooks";
 import { sendMessage } from "../lib/storage";
 import { ApplicationCard } from "./ApplicationCard";
 import { ConfirmButton, CopyButton } from "../components/buttons";
-import { PrefillPageActions } from "../prefill/PrefillPageActions";
 import { toJson } from "./json";
+import { PageActions } from "./PageActions";
 
 export function App() {
   const { records, loading } = useApplications();
 
   return (
     <>
-      <PrefillPageActions />
+      <PageActions />
 
       <header>
         <h1>Saved applications</h1>

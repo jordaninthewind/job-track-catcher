@@ -3,8 +3,7 @@
 
 import { connectDevReload } from "./lib/dev-reload";
 import { APPLICATIONS_KEY, getRecords, setRecords } from "./lib/storage";
-import type { Application, Message, MessageResponse, StoredApplication } from "./lib/types";
-import type { TabMessage } from "./prefill/types";
+import type { Application, Message, MessageResponse, StoredApplication, TabMessage } from "./lib/types";
 
 if (process.env.NODE_ENV === "development") connectDevReload(process.env.DEV_SERVER_PORT ?? "8000");
 

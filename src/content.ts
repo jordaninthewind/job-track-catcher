@@ -10,11 +10,11 @@
 
 import { clean, collectInputs, countFields, HOST_ATTR, isVisible, textOf } from "./lib/fields";
 import { getSettings, sendMessage } from "./lib/storage";
-import type { Application } from "./lib/types";
+import { toggleDarkMode } from "./lib/dark-mode";
+import type { Application, TabMessage } from "./lib/types";
 import { describeResult, prefill } from "./prefill/fill";
 import { toast } from "./prefill/overlay";
 import { startPicker, stopPicker } from "./prefill/picker";
-import type { TabMessage } from "./prefill/types";
 
 declare global {
   interface Window {
@@ -266,6 +266,9 @@ function onTabMessage(message: TabMessage, _sender: chrome.runtime.MessageSender
       break;
     case "PREFILL_PAGE":
       prefillPage();
+      break;
+    case "TOGGLE_DARK_MODE":
+      toggleDarkMode();
       break;
   }
   sendResponse({ ok: true });

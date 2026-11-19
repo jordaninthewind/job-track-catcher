@@ -15,6 +15,3 @@ export interface PendingPrefill {
   url: string;
   capturedAt: string;
 }
-
-/** Messages the popup / background send to the content script in a tab. */
-export type TabMessage = { type: "START_PICKER" } | { type: "STOP_PICKER" } | { type: "PREFILL_PAGE" };
