@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { APPLICATIONS_KEY, DEFAULT_SETTINGS, getRecords, getSettings, isStoredApplication, saveSettings } from "./storage";
+import { APPLICATIONS_KEY, DEFAULT_SETTINGS, getRecords, getSettings, saveSettings, toRecords } from "./storage";
 import type { Settings, StoredApplication } from "./types";
 
 /** Saved applications, kept live as the background worker writes new ones. */
@@ -17,7 +17,7 @@ export function useApplications(): { records: StoredApplication[]; loading: bool
       const change = changes[APPLICATIONS_KEY];
       if (area !== "local" || !change) return;
       const next: unknown = change.newValue;
-      setRecords(Array.isArray(next) ? next.filter(isStoredApplication) : []);
+      setRecords(toRecords(next));
     };
     chrome.storage.onChanged.addListener(onChanged);
     return () => chrome.storage.onChanged.removeListener(onChanged);

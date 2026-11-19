@@ -218,3 +218,34 @@ button:disabled {
 .actions {
   flex-wrap: wrap;
 }
+
+.stage {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.stage select {
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 4px;
+}
+
+.stage-badge {
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.stage-offer {
+  color: var(--accent);
+}
+
+.stage-rejected,
+.stage-withdrawn {
+  color: var(--muted);
+  text-decoration: line-through;
+}

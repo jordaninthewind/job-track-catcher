@@ -8,6 +8,7 @@
     "dev": "bun scripts/dev.ts",
     "build": "bun scripts/build.ts",
     "typecheck": "tsc --noEmit",
+    "test": "bun test",
     "clean": "rm -rf dist"
   },
   "dependencies": {

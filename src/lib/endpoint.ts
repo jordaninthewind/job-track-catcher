@@ -11,6 +11,8 @@ export const TEST_PAYLOAD = {
   url: "https://example.com/jobs/test",
   company: "Job Track Catcher",
   role: "Test request",
+  date: new Date(0).toISOString(),
+  stage: "applied",
   inputs: { Note: "Sent from Settings → Send test. Safe to delete." },
 };
 

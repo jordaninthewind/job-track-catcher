@@ -17,7 +17,8 @@ bun install
 | ------------------- | ------------------------------------------------------------------------------------------------ |
 | `bun run dev`       | Dev build into `dist/`, rebuilds on change, auto-reloads the extension, serves `test/` on :8000 |
 | `bun run build`     | Production build into `dist/` (minified, no dev reloader)                                        |
-| `bun run typecheck` | `tsc --noEmit` over `src/` and `scripts/`                                                        |
+| `bun run typecheck` | `tsc --noEmit` over `src/`, `scripts/`, `tests/`                                                      |
+| `bun run test`      | `bun test`: background save/send/stage logic and the Google Sheets Apps Script (`tests/`)       |
 | `bun run clean`     | Delete `dist/`                                                                                   |
 
 ## Load the extension in Chrome
@@ -93,8 +94,9 @@ Settings under **Sending to a Google Sheet**, with a **Copy script** button.
 2. **Deploy → New deployment → Web app**, execute as **Me**, access **Anyone**.
 3. Paste the Web app URL (ends in `/exec`) into Settings, Save, then **Send test**.
 
-Each application becomes a row: Saved at, Company, Role, URL, then one column per question (new
-questions add columns). Saving the same job URL again updates its row. Anyone with the `/exec` URL can
+Each application becomes a row: Date, Stage, Company, Role, URL, Saved at (last sent), then one column per
+question (new questions add columns). Saving the same job URL again, or changing its stage in the popup,
+updates its row. Anyone with the `/exec` URL can
 add rows, so keep it private.
 
 ## Record shape
@@ -107,6 +109,8 @@ This is what "Copy JSON" produces and what is POSTed to the tracking endpoint
   "url": "https://thatch.com/jobs/software-engineer-full-stack-5113761008",
   "company": "Thatch",
   "role": "Software Engineer: Full Stack",
+  "date": "2026-11-18T23:42:10.512Z",
+  "stage": "applied",
   "inputs": {
     "First Name": "Ada",
     "Preferred First Name": "",
@@ -118,6 +122,11 @@ This is what "Copy JSON" produces and what is POSTed to the tracking endpoint
 
 - `url` is the address-bar URL, so forms embedded from an ATS iframe (Greenhouse etc.) are saved under the
   company's job page.
+- `date` is when you applied: the first time you saved this job page (ISO 8601, UTC). Saving the same page
+  again keeps it.
+- `stage` starts as `"applied"`. Change it from the dropdown on the application's card in the popup:
+  `applied`, `interviewing`, `offer`, `rejected` or `withdrawn`. A change is re-sent if a tracking URL is
+  set. Applications saved before these fields existed get their save time and `"applied"`.
 - `inputs` keys are the question labels in page order. Unanswered questions are kept as `""`.
 - Custom dropdowns (react-select, used by Greenhouse) are read from the displayed selection.
 
@@ -159,4 +168,5 @@ integrations/
   google-sheets/Code.gs  Apps Script web app that writes applications into a Google Sheet
 test/
   sample-application.html
+tests/                 bun test suites (chrome.* stub in chrome-stub.ts)
 ```

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { sendMessage } from "../lib/storage";
-import type { StoredApplication, SyncStatus } from "../lib/types";
+import { STAGES, type Stage, type StoredApplication, type SyncStatus } from "../lib/types";
 import { ConfirmButton, CopyButton } from "../components/buttons";
 import { toJson } from "./json";
 
@@ -35,6 +35,37 @@ function SendButton({ id, sync }: { id: string; sync?: SyncStatus }) {
   );
 }
 
+const stageLabel = (stage: Stage) => stage.charAt(0).toUpperCase() + stage.slice(1);
+
+/** Stage dropdown. Changing it saves locally and, if a tracking URL is set, re-sends the application. */
+function StagePicker({ id, stage }: { id: string; stage: Stage }) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const change = async (next: Stage) => {
+    setSaving(true);
+    setError("");
+    try {
+      const res = await sendMessage({ type: "SET_STAGE", id, stage: next });
+      if (!res.ok) setError(res.error);
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <label className="stage">
+      Stage{" "}
+      <select value={stage} disabled={saving} onChange={(e) => change(e.target.value as Stage)}>
+        {STAGES.map((s) => (
+          <option key={s} value={s}>
+            {stageLabel(s)}
+          </option>
+        ))}
+      </select>
+      {error && <span className="failed"> {error}</span>}
+    </label>
+  );
+}
+
 export function ApplicationCard({ record, canSend }: { record: StoredApplication; canSend: boolean }) {
   const { application: app } = record;
   const [showJson, setShowJson] = useState(false);
@@ -50,7 +81,8 @@ export function ApplicationCard({ record, canSend }: { record: StoredApplication
           <div className="company">{app.company || "Unknown company"}</div>
           <div className="job">{app.role || app.url}</div>
           <div className="meta muted">
-            {new Date(record.savedAt).toLocaleString()} · {answered}/{entries.length} answered
+            <span className={`stage-badge stage-${app.stage}`}>{stageLabel(app.stage)}</span> ·{" "}
+            {new Date(app.date).toLocaleString()} · {answered}/{entries.length} answered
             {sync && (
               <>
                 {" · "}
@@ -61,6 +93,8 @@ export function ApplicationCard({ record, canSend }: { record: StoredApplication
         </summary>
 
         <div className="body">
+          <StagePicker id={record.id} stage={app.stage} />
+
           <dl className="fields">
             {entries.map(([label, value]) => (
               <div key={label}>

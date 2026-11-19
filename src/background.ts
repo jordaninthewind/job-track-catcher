@@ -3,23 +3,39 @@
 
 import { connectDevReload } from "./lib/dev-reload";
 import { postToEndpoint, TEST_PAYLOAD } from "./lib/endpoint";
-import { APPLICATIONS_KEY, getRecords, getSettings, setRecords } from "./lib/storage";
-import type { Application, Message, MessageResponse, StoredApplication, SyncStatus, TabMessage } from "./lib/types";
+import { APPLICATIONS_KEY, getRecords, getSettings, isStage, setRecords } from "./lib/storage";
+import {
+  DEFAULT_STAGE,
+  type Application,
+  type ApplicationInput,
+  type Message,
+  type MessageResponse,
+  type Stage,
+  type StoredApplication,
+  type SyncStatus,
+  type TabMessage,
+} from "./lib/types";
 
 if (process.env.NODE_ENV === "development") connectDevReload(process.env.DEV_SERVER_PORT ?? "8000");
 
-// Saving the same application page again replaces the earlier record.
-async function saveApplication(payload: Application, sender: chrome.runtime.MessageSender) {
+// Saving the same application page again replaces the earlier record, but keeps its
+// applied date and stage: those describe the application, not this particular save.
+async function saveApplication(payload: ApplicationInput, sender: chrome.runtime.MessageSender) {
+  // The tab URL is the company's job page even when the form is in an ATS iframe.
+  const url = sender.tab?.url || payload.url || "";
+  const records = await getRecords();
+  const existing = records.findIndex((r) => r.application.url === url);
+  const previous = records[existing]?.application;
+
   const application: Application = {
-    // The tab URL is the company's job page even when the form is in an ATS iframe.
-    url: sender.tab?.url || payload.url || "",
+    url,
     company: payload.company || "",
     role: payload.role || "",
+    date: previous?.date ?? new Date().toISOString(),
+    stage: previous?.stage ?? DEFAULT_STAGE,
     inputs: payload.inputs || {},
   };
 
-  const records = await getRecords();
-  const existing = records.findIndex((r) => r.application.url === application.url);
   const record: StoredApplication = {
     id: records[existing]?.id ?? crypto.randomUUID(),
     savedAt: new Date().toISOString(),
@@ -55,6 +71,15 @@ async function sendApplication(id: string): Promise<SyncStatus | undefined> {
   return sync;
 }
 
+async function setStage(id: string, stage: Stage): Promise<SyncStatus | undefined> {
+  if (!isStage(stage)) throw new Error(`Unknown stage "${stage}"`);
+  const records = await getRecords();
+  if (!records.some((r) => r.id === id)) throw new Error("That application no longer exists.");
+  await setRecords(records.map((r) => (r.id === id ? { ...r, application: { ...r.application, stage } } : r)));
+  // Keep the tracking sheet in step (the Apps Script updates the row with the same URL).
+  return sendApplication(id);
+}
+
 async function sendTest(): Promise<SyncStatus> {
   const { sheetUrl } = await getSettings();
   if (!sheetUrl) throw new Error("Enter and save a URL first.");
@@ -71,6 +96,8 @@ async function handle(message: Message, sender: chrome.runtime.MessageSender): P
     case "CLEAR_APPLICATIONS":
       await setRecords([]);
       return { ok: true };
+    case "SET_STAGE":
+      return { ok: true, sync: await setStage(message.id, message.stage) };
     case "SEND_APPLICATION": {
       const sync = await sendApplication(message.id);
       return sync ? { ok: true, sync } : { ok: false, error: "No tracking URL is set. Add one in Settings." };

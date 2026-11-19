@@ -11,7 +11,7 @@
 import { clean, collectInputs, countFields, HOST_ATTR, isVisible, textOf } from "./lib/fields";
 import { getSettings, sendMessage } from "./lib/storage";
 import { toggleDarkMode } from "./lib/dark-mode";
-import type { Application, TabMessage } from "./lib/types";
+import type { ApplicationInput, TabMessage } from "./lib/types";
 import { describeResult, prefill } from "./prefill/fill";
 import { toast } from "./prefill/overlay";
 import { startPicker, stopPicker } from "./prefill/picker";
@@ -111,7 +111,8 @@ async function handleSave(submitEl: HTMLElement, btn: HTMLButtonElement) {
 
   // `url` is replaced by the tab's address-bar URL in the background, so
   // forms embedded in an iframe are saved under the company's own job page.
-  const application: Application = { url: location.href, company: companyName(), role: roleName(), inputs };
+  // The background also adds `date` (first save) and `stage` ("applied").
+  const application: ApplicationInput = { url: location.href, company: companyName(), role: roleName(), inputs };
 
   btn.disabled = true;
   btn.textContent = "Saving…";

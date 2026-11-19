@@ -2,8 +2,9 @@
  * Job Track Catcher → Google Sheets
  *
  * Receives applications POSTed by the extension and writes one row per application.
- * Columns: Saved at, Company, Role, URL, then one column per question (added as new
- * questions appear). Saving the same job URL again updates its row instead of adding one.
+ * Columns: Date (applied), Stage, Company, Role, URL, Saved at (last sent), then one column
+ * per question (added as new questions appear). Saving the same job URL again, or changing
+ * its stage in the extension, updates its row instead of adding one.
  *
  * Setup:
  *   1. Open your tracking sheet → Extensions → Apps Script.
@@ -20,7 +21,7 @@
 // Name of the tab to write to. Leave empty to use the first tab.
 const SHEET_NAME = "";
 
-const FIXED_COLUMNS = ["Saved at", "Company", "Role", "URL"];
+const FIXED_COLUMNS = ["Date", "Stage", "Company", "Role", "URL", "Saved at"];
 
 function doPost(e) {
   let data;
@@ -41,7 +42,14 @@ function doPost(e) {
     if (!sheet) return reply({ ok: false, error: `No tab named "${SHEET_NAME}"` });
 
     const row = Object.assign(
-      { "Saved at": new Date(), Company: data.company || "", Role: data.role || "", URL: data.url || "" },
+      {
+        Date: data.date ? new Date(data.date) : new Date(),
+        Stage: data.stage || "",
+        Company: data.company || "",
+        Role: data.role || "",
+        URL: data.url || "",
+        "Saved at": new Date(),
+      },
       data.inputs || {}
     );
 

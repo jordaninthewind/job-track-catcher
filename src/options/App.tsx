@@ -91,7 +91,7 @@ function GeneralSettings() {
       />
       <p className="hint">
         Every application you save is sent here as a JSON <code>POST</code> of{" "}
-        <code>{"{ url, company, role, inputs }"}</code>. Leave empty to keep applications in the extension only.
+        <code>{"{ url, company, role, date, stage, inputs }"}</code>. Leave empty to keep applications in the extension only.
         Chrome asks once for access to the site when you save.
       </p>
 
@@ -110,8 +110,8 @@ function GeneralSettings() {
           <li>Authorize, copy the Web app URL (ends in /exec), paste it above, then Save and Send test.</li>
         </ol>
         <p>
-          Each application becomes a row (Saved at, Company, Role, URL, then a column per question). Saving the same
-          job again updates its row. Anyone with the /exec URL can add rows, so keep it private.
+          Each application becomes a row (Date, Stage, Company, Role, URL, Saved at, then a column per question).
+          Saving the same job again, or changing its stage, updates its row. Anyone with the /exec URL can add rows, so keep it private.
         </p>
       </details>
 

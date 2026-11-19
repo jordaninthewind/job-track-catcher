@@ -1,13 +1,24 @@
 /** Question label → answer, in page order. Unanswered questions are "". */
 export type Inputs = Record<string, string>;
 
+/** Where an application is in the hiring process. "applied" is the default for new saves. */
+export const STAGES = ["applied", "interviewing", "offer", "rejected", "withdrawn"] as const;
+export type Stage = (typeof STAGES)[number];
+export const DEFAULT_STAGE: Stage = "applied";
+
 /** The value that gets copied, and POSTed to the tracking sheet / endpoint. */
 export interface Application {
   url: string;
   company: string;
   role: string;
+  /** When you applied (ISO 8601, UTC): the first save. Re-saving the same page keeps it. */
+  date: string;
+  stage: Stage;
   inputs: Inputs;
 }
+
+/** What the content script reads from the page; the background adds `date` and `stage`. */
+export type ApplicationInput = Omit<Application, "date" | "stage">;
 
 /** Result of the last POST of an application to the tracking endpoint. */
 export interface SyncStatus {
@@ -33,9 +44,11 @@ export interface Settings {
 }
 
 export type Message =
-  | { type: "SAVE_APPLICATION"; application: Application }
+  | { type: "SAVE_APPLICATION"; application: ApplicationInput }
   | { type: "DELETE_APPLICATION"; id: string }
   | { type: "CLEAR_APPLICATIONS" }
+  /** Change an application's stage (popup dropdown); re-sent if a tracking URL is set. */
+  | { type: "SET_STAGE"; id: string; stage: Stage }
   /** POST a saved application to the tracking endpoint again (popup "Send again"). */
   | { type: "SEND_APPLICATION"; id: string }
   /** POST a sample payload to the configured endpoint (Settings "Send test"). */
