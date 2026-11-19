@@ -1,4 +1,4 @@
-import { useApplications } from "../lib/hooks";
+import { useApplications, useSettings } from "../lib/hooks";
 import { sendMessage } from "../lib/storage";
 import { ApplicationCard } from "./ApplicationCard";
 import { ConfirmButton, CopyButton } from "../components/buttons";
@@ -7,6 +7,7 @@ import { PageActions } from "./PageActions";
 
 export function App() {
   const { records, loading } = useApplications();
+  const { settings } = useSettings();
 
   return (
     <>
@@ -25,7 +26,7 @@ export function App() {
       ) : (
         <ul className="list">
           {records.map((record) => (
-            <ApplicationCard key={record.id} record={record} />
+            <ApplicationCard key={record.id} record={record} canSend={!!settings.sheetUrl} />
           ))}
         </ul>
       )}

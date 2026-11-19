@@ -1,7 +1,7 @@
 # job-track-catcher
 
 A Chrome extension that adds a **Save Application Data** button next to job application submit buttons
-and saves your answers as JSON, ready for a tracking sheet.
+and saves your answers as JSON, optionally sending each one to a Google Sheet or your own endpoint.
 
 Built with [Bun](https://bun.com), TypeScript and React.
 
@@ -68,9 +68,38 @@ Fills text fields, textareas, native dropdowns, radio and checkbox groups, and c
 Answers are stored in `chrome.storage.local` (`prefill`, plus `prefillPending` for captured answers awaiting
 review), keyed by label rather than site.
 
+## Sending to a tracking sheet / endpoint
+
+Set **Settings → Tracking sheet / endpoint URL**. Every saved application is then POSTed there as JSON
+(`Content-Type: application/json`, body = the record shape below). Leave it empty to keep everything local.
+
+- **Access:** when you click Save, Chrome asks for access to that one site (declared as
+  `optional_host_permissions`, so nothing is requested up front). The request comes from the background
+  worker, so the endpoint doesn't need CORS headers.
+- **Results:** the save button shows "Saved & sent ✓" or "send failed". The popup marks each application
+  Sent / Send failed (with the reason) and has **Send** / **Send again** buttons. A failed send never
+  loses the local copy.
+- **Successful send:** any 2xx response, unless the JSON body is `{ "ok": false, "error": "…" }`.
+- **Send test** in Settings POSTs a sample with `"test": true`, so endpoints can acknowledge it without
+  storing it.
+
+### Google Sheets
+
+A sheet's own URL can't receive POSTs, so put the Apps Script in
+[`integrations/google-sheets/Code.gs`](integrations/google-sheets/Code.gs) in front of it. It's also in
+Settings under **Sending to a Google Sheet**, with a **Copy script** button.
+
+1. In the sheet: **Extensions → Apps Script**, replace `Code.gs` with the script, save.
+2. **Deploy → New deployment → Web app**, execute as **Me**, access **Anyone**.
+3. Paste the Web app URL (ends in `/exec`) into Settings, Save, then **Send test**.
+
+Each application becomes a row: Saved at, Company, Role, URL, then one column per question (new
+questions add columns). Saving the same job URL again updates its row. Anyone with the `/exec` URL can
+add rows, so keep it private.
+
 ## Record shape
 
-This is what "Copy JSON" produces and what will later be sent to a sheet or endpoint
+This is what "Copy JSON" produces and what is POSTed to the tracking endpoint
 (`Application` in `src/lib/types.ts`):
 
 ```json
@@ -119,10 +148,15 @@ src/
     types.ts           Application, StoredApplication, Settings, message types
     storage.ts         chrome.storage helpers + typed sendMessage
     hooks.ts           useApplications / useSettings React hooks
+    endpoint.ts        POSTs applications to the tracking URL, URL validation, permission origins
+    tabs.ts            send a command to the active tab's content script
+    dark-mode.ts       forced dark theme for the current page
     dev-reload.ts      dev-build-only auto-reload (stripped from production builds)
 scripts/
   build.ts             Bun.build: HTML pages, ESM service worker, IIFE content script → dist/
   dev.ts               watch + rebuild + reload server
+integrations/
+  google-sheets/Code.gs  Apps Script web app that writes applications into a Google Sheet
 test/
   sample-application.html
 ```

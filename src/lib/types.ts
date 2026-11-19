@@ -1,7 +1,7 @@
 /** Question label → answer, in page order. Unanswered questions are "". */
 export type Inputs = Record<string, string>;
 
-/** The value that gets copied, and later sent to a sheet / endpoint. */
+/** The value that gets copied, and POSTed to the tracking sheet / endpoint. */
 export interface Application {
   url: string;
   company: string;
@@ -9,14 +9,25 @@ export interface Application {
   inputs: Inputs;
 }
 
+/** Result of the last POST of an application to the tracking endpoint. */
+export interface SyncStatus {
+  state: "sent" | "failed";
+  at: string;
+  httpStatus?: number;
+  error?: string;
+}
+
 /** How an application is kept in chrome.storage.local. */
 export interface StoredApplication {
   id: string;
   savedAt: string;
   application: Application;
+  /** Missing until a tracking URL is configured and a send has been attempted. */
+  sync?: SyncStatus;
 }
 
 export interface Settings {
+  /** POST endpoint: a REST API, or a Google Apps Script web app in front of a Sheet. Empty = don't send. */
   sheetUrl: string;
   enabled: boolean;
 }
@@ -25,6 +36,10 @@ export type Message =
   | { type: "SAVE_APPLICATION"; application: Application }
   | { type: "DELETE_APPLICATION"; id: string }
   | { type: "CLEAR_APPLICATIONS" }
+  /** POST a saved application to the tracking endpoint again (popup "Send again"). */
+  | { type: "SEND_APPLICATION"; id: string }
+  /** POST a sample payload to the configured endpoint (Settings "Send test"). */
+  | { type: "SEND_TEST" }
   /** From the Prefill picker in any frame: stop picking in every frame of that tab. */
   | { type: "STOP_PICKER" };
 
@@ -36,5 +51,11 @@ export type TabMessage =
   | { type: "TOGGLE_DARK_MODE" };
 
 export type MessageResponse =
-  | { ok: true; id?: string; updated?: boolean }
+  | {
+      ok: true;
+      id?: string;
+      updated?: boolean;
+      /** Outcome of sending to the tracking endpoint; absent when no URL is configured. */
+      sync?: SyncStatus;
+    }
   | { ok: false; error: string };

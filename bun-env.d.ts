@@ -15,3 +15,9 @@ declare module "*.module.css" {
   const classes: { readonly [key: string]: string };
   export = classes;
 }
+
+// Imported with `with { type: "text" }` (e.g. the Google Apps Script shown in Settings).
+declare module "*.gs" {
+  const text: string;
+  export default text;
+}

@@ -113,9 +113,16 @@ async function handleSave(submitEl: HTMLElement, btn: HTMLButtonElement) {
   // forms embedded in an iframe are saved under the company's own job page.
   const application: Application = { url: location.href, company: companyName(), role: roleName(), inputs };
 
+  btn.disabled = true;
+  btn.textContent = "Saving…";
   try {
     const res = await sendMessage({ type: "SAVE_APPLICATION", application });
-    flash(btn, res.ok ? (res.updated ? "Updated ✓" : "Saved ✓") : "Save failed", SAVE_LABEL);
+    if (!res.ok) return flash(btn, "Save failed", SAVE_LABEL);
+    const saved = res.updated ? "Updated" : "Saved";
+    if (!res.sync) return flash(btn, `${saved} ✓`, SAVE_LABEL);
+    if (res.sync.state === "sent") return flash(btn, `${saved} & sent ✓`, SAVE_LABEL);
+    flash(btn, `${saved} ✓ · send failed`, SAVE_LABEL, 4000);
+    toast(`Saved locally, but sending to your tracking URL failed: ${res.sync.error ?? "unknown error"}. Retry from the extension popup.`, 6000);
   } catch {
     // Happens when the extension was reloaded but this page wasn't.
     flash(btn, "Reload page to save", SAVE_LABEL);
@@ -134,13 +141,13 @@ async function handlePrefill(submitEl: HTMLElement, btn: HTMLButtonElement) {
   }
 }
 
-function flash(btn: HTMLButtonElement, text: string, label: string) {
+function flash(btn: HTMLButtonElement, text: string, label: string, ms = 2000) {
   btn.textContent = text;
   btn.disabled = true;
   setTimeout(() => {
     btn.textContent = label;
     btn.disabled = false;
-  }, 2000);
+  }, ms);
 }
 
 // ---------- find submit buttons & inject ----------
